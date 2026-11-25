@@ -27,6 +27,8 @@ TESTS = \
 	test-autologin-guest-in-background \
 	test-autologin-timeout-in-background \
 	test-autologin-invalid-user \
+	test-autologin-invalid-user-no-share \
+	test-autologin-unknown-alias \
 	test-autologin-invalid-greeter \
 	test-autologin-invalid-session \
 	test-crash-authenticate \
@@ -411,6 +413,8 @@ EXTRA_DIST = \
 	scripts/autologin-pam-config.conf \
 	scripts/autologin-invalid-session.conf \
 	scripts/autologin-invalid-user.conf \
+	scripts/autologin-invalid-user-no-share.conf \
+	scripts/autologin-unknown-alias.conf \
 	scripts/autologin-logout.conf \
 	scripts/autologin-new-authtok.conf \
 	scripts/autologin-password.conf \

@@ -980,6 +980,13 @@ pam_authenticate (pam_handle_t *pamh, int flags)
     if (strcmp (pamh->user, "crash-authenticate") == 0)
         kill (getpid (), SIGSEGV);
 
+    /* Simulate PAM resolving an alias that has no passwd entry. */
+    if (strcmp (pamh->user, "unknown-alias") == 0)
+    {
+        g_free (pamh->user);
+        pamh->user = g_strdup ("no-password1");
+    }
+
     /* Look up password database */
     struct passwd *entry = getpwnam (pamh->user);
 

@@ -498,9 +498,11 @@ display_server_stopped_cb (DisplayServer *display_server, Seat *seat)
 
     if (!priv->stopping)
     {
-        /* If we were the active session, switch to a greeter */
-        Session *active_session = seat_get_active_session (seat);
-        if (!active_session || session_get_display_server (active_session) == display_server)
+        /* A greeter on its own display server may still be starting. */
+        Session *session = priv->session_to_activate;
+        if (!IS_GREETER_SESSION (session) || session_get_is_stopping (session))
+            session = seat_get_active_session (seat);
+        if (!session || session_get_display_server (session) == display_server)
         {
             l_debug (seat, "Active display server stopped, starting greeter");
             if (!seat_switch_to_greeter (seat))
@@ -599,19 +601,21 @@ switch_to_greeter_from_failed_session (Seat *seat, Session *session)
         priv->session_to_activate = g_object_ref (SESSION (greeter_session));
 
         if (can_share_display_server (seat, session_get_display_server (session)))
+        {
             session_set_display_server (SESSION (greeter_session), session_get_display_server (session));
+            start_session (seat, SESSION (greeter_session));
+        }
         else
         {
-            DisplayServer *display_server = create_display_server (seat, session);
-            session_set_display_server (session, display_server);
-            if (!start_display_server (seat, display_server))
+            DisplayServer *display_server = create_display_server (seat, SESSION (greeter_session));
+            if (display_server)
+                session_set_display_server (SESSION (greeter_session), display_server);
+            if (!display_server || !start_display_server (seat, display_server))
             {
                 l_debug (seat, "Failed to start display server for greeter");
                 seat_stop (seat);
             }
         }
-
-        start_session (seat, SESSION (greeter_session));
     }
 
     /* Stop failed session */
@@ -998,21 +1002,9 @@ create_user_session (Seat *seat, const gchar *username, gboolean autostart)
     l_debug (seat, "Creating user session");
 
     /* Load user preferences */
-    gboolean login_unknown = FALSE;
-
-    if (seat_get_string_property (seat, "login-unknown"))
-        login_unknown = seat_get_boolean_property (seat, "login-unknown");
-    else
-        login_unknown = config_get_boolean (config_get_instance (), "LightDM", "login-unknown");
-
     g_autoptr(User) user = accounts_get_user_by_name (username);
-    if (!user && !login_unknown)
-    {
-        l_debug (seat, "Can't login unknown user '%s'", username);
-        return NULL;
-    }
-    const gchar *session_name = user_get_xsession (user);
-    const gchar *language = user_get_language (user);
+    const gchar *session_name = user ? user_get_xsession (user) : NULL;
+    const gchar *language = user ? user_get_language (user) : NULL;
 
     /* Override session for autologin if configured */
     if (autostart)
